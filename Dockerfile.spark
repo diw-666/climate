@@ -1,0 +1,59 @@
+FROM apache/airflow:2.8.1
+
+USER root
+
+# Install necessary tools to download and extract JDK
+RUN apt-get update && apt-get install -y \
+    wget \
+    tar \
+    gnupg \
+    dirmngr \
+    gcc \
+    g++ \
+    libkrb5-dev \
+    --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
+
+# Download and install OpenJDK 11 using Adoptium API
+ENV JAVA_HOME=/opt/java/openjdk
+ENV PATH=$JAVA_HOME/bin:$PATH
+
+RUN set -eux; \
+    ARCHITECTURE=""; \
+    case "$(dpkg --print-architecture)" in \
+        amd64) ARCHITECTURE="x64" ;; \
+        arm64) ARCHITECTURE="aarch64" ;; \
+        *) echo "Unsupported architecture: $(dpkg --print-architecture)"; exit 1 ;; \
+    esac; \
+    \
+    JDK_URL="https://api.adoptium.net/v3/binary/latest/11/ga/linux/${ARCHITECTURE}/jdk/hotspot/normal/eclipse"; \
+    \
+    echo "Downloading JDK from: ${JDK_URL}"; \
+    wget -O /tmp/openjdk.tar.gz ${JDK_URL}; \
+    \
+    mkdir -p "$JAVA_HOME"; \
+    tar --extract --file /tmp/openjdk.tar.gz --directory "$JAVA_HOME" --strip-components 1 --no-same-owner ; \
+    rm /tmp/openjdk.tar.gz; \
+    \
+    # Remove unnecessary files to reduce image size
+    rm -rf "$JAVA_HOME"/lib/src.zip \
+           "$JAVA_HOME"/lib/missioncontrol \
+           "$JAVA_HOME"/lib/jfr \
+           "$JAVA_HOME"/lib/jvmci
+
+USER airflow
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy Spark job
+COPY spark/jobs/process_climate_data.py /opt/airflow/dags/spark/
+
+# Set environment variables
+# JAVA_HOME and PATH are already set above
+ENV SPARK_HOME=/opt/spark
+ENV PATH=$PATH:$SPARK_HOME/bin
+
+# Set working directory
+WORKDIR /opt/airflow 

@@ -1,0 +1,30 @@
+version: 2
+
+sources:
+  - name: climate_data
+    database: climate_db
+    schema: public
+    tables:
+      - name: climate_data
+        description: "Raw climate data loaded from S3"
+        columns:
+          - name: station_id
+            description: "Unique identifier for the weather station"
+          - name: year
+            description: "Year of the measurement"
+          - name: month
+            description: "Month of the measurement"
+          - name: day
+            description: "Day of the measurement"
+          - name: avg_temperature
+            description: "Average temperature for the day"
+          - name: max_temperature
+            description: "Maximum temperature for the day"
+          - name: min_temperature
+            description: "Minimum temperature for the day"
+          - name: avg_humidity
+            description: "Average humidity for the day"
+          - name: total_rainfall
+            description: "Total rainfall for the day"
+          - name: avg_wind_speed
+            description: "Average wind speed for the day" 
